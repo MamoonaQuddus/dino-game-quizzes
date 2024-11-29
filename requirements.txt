@@ -1,4 +1,1 @@
-streamlit==1.18.1
-transformers==4.25.0
-torch==2.5.1
 
