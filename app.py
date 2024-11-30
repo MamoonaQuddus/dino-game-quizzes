@@ -27,10 +27,15 @@ def fetch_questions(topic="math", num_questions=3):
         
         # Construct the payload
         payload = {
-            "model": "llama-3.1-70b-versatile",  # Use the desired model
+            "model": "llama-3.1-70b-versatile",
             "messages": [
                 {"role": "user", "content": prompt}
-            ]
+            ],
+            "temperature": 1,
+            "max_tokens": 1024,
+            "top_p": 1,
+            "stream": False,
+            "stop": None
         }
 
         # Set the headers
