@@ -14,27 +14,50 @@ if "questions" not in st.session_state:
     st.session_state.questions = []
 
 # Groq API settings
-API_URL = "https://api.groq.ai/generate_question"  # Replace with the actual Groq API endpoint
+API_URL = "https://api.groq.com/openai/v1/chat/completions"  # Correct endpoint
 API_KEY = " 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"  # Replace with your Groq API key
 
-
-def fetch_questions(topic, num_questions=3):
+def fetch_questions(topic="math", num_questions=3):
     """
-    Fetch quiz questions dynamically from the Groq API.
+    Fetch quiz questions dynamically from the Groq API using llama-3.1-70b-versatile.
     """
     try:
-        response = requests.post(
-            API_URL,
-            json={"topic": topic, "num_questions": num_questions},
-            headers={"Authorization": f"Bearer {API_KEY}"},
-        )
-        response.raise_for_status()
+        # Create the chat-style prompt for generating questions
+        prompt = f"Generate {num_questions} {topic} quiz questions. Each question should include the correct answer."
+        
+        # Construct the payload
+        payload = {
+            "model": "llama-3.1-70b-versatile",  # Use the desired model
+            "messages": [
+                {"role": "user", "content": prompt}
+            ]
+        }
+
+        # Set the headers
+        headers = {
+            "Authorization": f"Bearer {API_KEY}",
+            "Content-Type": "application/json"
+        }
+
+        # Make the API request
+        response = requests.post(API_URL, json=payload, headers=headers)
+        response.raise_for_status()  # Raise error for HTTP issues
+
+        # Parse the API response
         data = response.json()
-        return data.get("questions", [])
+        content = data["choices"][0]["message"]["content"]
+
+        # Extract questions and answers from the response content
+        questions = []
+        for line in content.split("\n"):
+            if line.strip().startswith("Question:"):
+                question = line.replace("Question:", "").strip()
+                questions.append({"question": question, "answer": None})  # Placeholder for answers
+
+        return questions
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching questions: {e}")
         return []
-
 
 # Function to reset the quiz
 def reset_quiz():
@@ -43,7 +66,6 @@ def reset_quiz():
     st.session_state.attempts = 0
     st.session_state.lives = 3
     st.session_state.questions = []
-
 
 # Fetch questions if not already fetched
 if not st.session_state.questions:
