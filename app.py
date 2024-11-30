@@ -1,45 +1,88 @@
 import streamlit as st
-import json
-
-# Load math quiz data
-with open("math_quizzes.json", "r") as file:
-    quizzes = json.load(file)
+import requests
 
 # Initialize session state
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "current_question" not in st.session_state:
     st.session_state.current_question = 0
-if "current_operation" not in st.session_state:
-    st.session_state.current_operation = "addition"
+if "attempts" not in st.session_state:
+    st.session_state.attempts = 0
+if "lives" not in st.session_state:
+    st.session_state.lives = 3  # Start with 3 lives
+if "questions" not in st.session_state:
+    st.session_state.questions = []
 
-# Sidebar for selecting math operation
-st.sidebar.title("Math Quiz Settings")
-st.session_state.current_operation = st.sidebar.selectbox(
-    "Choose a Math Operation:",
-    options=quizzes.keys()
-)
+# Groq API settings
+API_URL = "https://api.groq.com/openai/v1/chat/completions"  # Replace with the actual Groq API endpoint
+API_KEY = " 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"  # Replace with your Groq API key
 
-# Get questions for the selected operation
-operation_questions = quizzes[st.session_state.current_operation]
 
-# Display the quiz
-st.title("Math Quiz")
-if st.session_state.current_question < len(operation_questions):
-    current_quiz = operation_questions[st.session_state.current_question]
-    st.write(f"**Question:** {current_quiz['question']}")
+def fetch_questions(topic, num_questions=3):
+    """
+    Fetch quiz questions dynamically from the Groq API.
+    """
+    try:
+        response = requests.post(
+            API_URL,
+            json={"topic": topic, "num_questions": num_questions},
+            headers={"Authorization": f"Bearer {API_KEY}"},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("questions", [])
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error fetching questions: {e}")
+        return []
 
-    user_answer = st.text_input("Your Answer", key="answer")
-    if st.button("Submit"):
-        # For now, assume the answer is always correct
-        st.success("Correct!")
-        st.session_state.score += 1
-        st.session_state.current_question += 1
-else:
-    st.write("You've completed all questions!")
-    st.write(f"**Your Score:** {st.session_state.score}/{len(operation_questions)}")
 
-if st.button("Reset Quiz"):
+# Function to reset the quiz
+def reset_quiz():
     st.session_state.current_question = 0
     st.session_state.score = 0
+    st.session_state.attempts = 0
+    st.session_state.lives = 3
+    st.session_state.questions = []
 
+
+# Fetch questions if not already fetched
+if not st.session_state.questions:
+    st.session_state.questions = fetch_questions("math", num_questions=3)
+
+# Main quiz logic
+st.title("Dino Game - Quiz Mode")
+st.write("Answer the questions to regain lives!")
+
+if st.session_state.lives > 0:  # Check if the player has lives left
+    if st.session_state.current_question < len(st.session_state.questions):
+        current_quiz = st.session_state.questions[st.session_state.current_question]
+        st.write(f"**Question:** {current_quiz['question']}")
+        user_answer = st.text_input("Your Answer", key=f"q{st.session_state.current_question}")
+
+        if st.button("Submit"):
+            if user_answer:
+                if user_answer == current_quiz["answer"]:  # Compare with the correct answer
+                    st.success("Correct!")
+                    st.session_state.score += 1
+                    st.session_state.current_question += 1
+                    st.session_state.attempts = 0
+                else:
+                    st.error("Wrong! Try again.")
+                    st.session_state.attempts += 1
+                    if st.session_state.attempts >= 3:  # Max retries reached
+                        st.warning("Maximum attempts reached! Moving to the next question.")
+                        st.session_state.lives -= 1  # Decrease life if wrong attempts exceed limit
+                        st.session_state.current_question += 1
+                        st.session_state.attempts = 0
+    else:
+        st.write(f"Quiz completed! **Score:** {st.session_state.score}/{len(st.session_state.questions)}")
+        if st.session_state.score == len(st.session_state.questions):
+            st.write("You answered all questions correctly! Restoring lives.")
+            st.session_state.lives = 3  # Restore lives if all questions were answered correctly
+        if st.button("Restart Quiz"):
+            reset_quiz()
+else:
+    st.write("You have no lives left! Returning to the main game.")
+    if st.button("Exit Quiz Mode"):
+        # Reset quiz and return to main game
+        reset_quiz()
