@@ -14,7 +14,7 @@ if "questions" not in st.session_state:
     st.session_state.questions = []
 
 # Groq API settings
-API_URL = "https://api.groq.com/openai/v1/chat/completions"  # Replace with the actual Groq API endpoint
+API_URL = "https://api.groq.ai/generate_question"  # Replace with the actual Groq API endpoint
 API_KEY = " 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"  # Replace with your Groq API key
 
 
