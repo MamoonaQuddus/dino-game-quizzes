@@ -14,8 +14,8 @@ if "questions" not in st.session_state:
     st.session_state.questions = []
 
 # Groq API settings
-API_URL = "https://api.groq.com/openai/v1/chat/completions"  # Correct endpoint
-API_KEY = " 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"  # Replace with your Groq API key
+API_URL = "https://api.groq.com/openai/v1/chat/completions"  # Confirm this is the correct endpoint
+API_KEY = " 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"  # Replace with your valid Groq API key
 
 def fetch_questions(topic="math", num_questions=3):
     """
@@ -52,7 +52,9 @@ def fetch_questions(topic="math", num_questions=3):
         for line in content.split("\n"):
             if line.strip().startswith("Question:"):
                 question = line.replace("Question:", "").strip()
-                questions.append({"question": question, "answer": None})  # Placeholder for answers
+            elif line.strip().startswith("Answer:"):
+                answer = line.replace("Answer:", "").strip()
+                questions.append({"question": question, "answer": answer})  # Add question-answer pair
 
         return questions
     except requests.exceptions.RequestException as e:
@@ -81,9 +83,9 @@ if st.session_state.lives > 0:  # Check if the player has lives left
         st.write(f"**Question:** {current_quiz['question']}")
         user_answer = st.text_input("Your Answer", key=f"q{st.session_state.current_question}")
 
-        if st.button("Submit"):
+        if st.button("Submit", key=f"submit_{st.session_state.current_question}"):
             if user_answer:
-                if user_answer == current_quiz["answer"]:  # Compare with the correct answer
+                if user_answer.lower() == current_quiz["answer"].lower():  # Compare with the correct answer
                     st.success("Correct!")
                     st.session_state.score += 1
                     st.session_state.current_question += 1
